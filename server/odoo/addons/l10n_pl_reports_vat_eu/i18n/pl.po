@@ -1,0 +1,174 @@
+# Translation of Odoo Server.
+# This file contains the translation of the following modules:
+# * l10n_pl_reports_vat_eu
+#
+# "Marta (wacm)" <wacm@odoo.com>, 2026.
+msgid ""
+msgstr ""
+"Project-Id-Version: Odoo Server 19.0+e\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-08-28 18:14+0000\n"
+"PO-Revision-Date: 2026-11-04 15:08+0000\n"
+"Last-Translator: \"Marta (wacm)\" <wacm@odoo.com>\n"
+"Language-Team: Polish <https://translate.odoo.com/projects/odoo-19/"
+"l10n_pl_reports_vat_eu/pl/>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: \n"
+"Plural-Forms: nplurals=3; plural=n==1 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 "
+"|| n%100>=20) ? 1 : 2;\n"
+"Language: pl\n"
+"X-Generator: Weblate 2026.8.1\n"
+
+#. module: l10n_pl_reports_vat_eu
+#. odoo-python
+#: code:addons/l10n_pl_reports_vat_eu/models/account_sales_report.py:0
+msgid "A valid EU VAT number is required for partner %s."
+msgstr "Wymagany jest ważny numer VAT UE dla partnera %s."
+
+#. module: l10n_pl_reports_vat_eu
+#: model:account.report.column,name:l10n_pl_reports_vat_eu.vat_eu_acquisitions
+msgid "Acquisitions of Goods"
+msgstr "Wewnątrzwspólnotowe nabycie towarów"
+
+#. module: l10n_pl_reports_vat_eu
+#. odoo-python
+#: code:addons/l10n_pl_reports_vat_eu/models/account_sales_report.py:0
+msgid "Acquisitions of goods"
+msgstr "Wewnątrzwspólnotowe nabycie towarów"
+
+#. module: l10n_pl_reports_vat_eu
+#. odoo-python
+#: code:addons/l10n_pl_reports_vat_eu/models/account_sales_report.py:0
+msgid ""
+"Configure the company VAT number and tax office before exporting VAT-UE."
+msgstr ""
+"Skonfiguruj numer VAT firmy oraz urząd skarbowy przed wyeksportowaniem "
+"deklaracji VAT-UE."
+
+#. module: l10n_pl_reports_vat_eu
+#. odoo-python
+#: code:addons/l10n_pl_reports_vat_eu/models/account_sales_report.py:0
+msgid "Configure your company"
+msgstr "Skonfiguruj swoją firmę"
+
+#. module: l10n_pl_reports_vat_eu
+#: model:account.report.column,name:l10n_pl_reports_vat_eu.vat_eu_country
+msgid "Country Code"
+msgstr "Kod kraju"
+
+#. module: l10n_pl_reports_vat_eu
+#: model:ir.model.fields,field_description:l10n_pl_reports_vat_eu.field_l10n_pl_vat_eu_report_handler__display_name
+msgid "Display Name"
+msgstr "Nazwa wyświetlana"
+
+#. module: l10n_pl_reports_vat_eu
+#: model:account.report,name:l10n_pl_reports_vat_eu.vat_eu_report
+msgid "EC Sales and Purchase List (VAT-UE)"
+msgstr "Wspólnotowa deklaracja VAT (VAT-UE) dotycząca sprzedaży i zakupu"
+
+#. module: l10n_pl_reports_vat_eu
+#: model:ir.model.fields,field_description:l10n_pl_reports_vat_eu.field_l10n_pl_vat_eu_report_handler__id
+msgid "ID"
+msgstr "ID"
+
+#. module: l10n_pl_reports_vat_eu
+#: model:ir.model,name:l10n_pl_reports_vat_eu.model_l10n_pl_vat_eu_report_handler
+msgid "Polish VAT-UE Report Custom Handler"
+msgstr "Niestandardowa obsługa raportu VAT-UE w języku polskim"
+
+#. module: l10n_pl_reports_vat_eu
+#: model:account.report.column,name:l10n_pl_reports_vat_eu.vat_eu_goods
+msgid "Supplies of Goods"
+msgstr "Dostawy towarów"
+
+#. module: l10n_pl_reports_vat_eu
+#: model:account.report.column,name:l10n_pl_reports_vat_eu.vat_eu_services
+msgid "Supplies of Services"
+msgstr "Świadczenie usług"
+
+#. module: l10n_pl_reports_vat_eu
+#. odoo-python
+#: code:addons/l10n_pl_reports_vat_eu/models/account_sales_report.py:0
+msgid "Supplies of goods"
+msgstr "Świadczenie usług"
+
+#. module: l10n_pl_reports_vat_eu
+#. odoo-python
+#: code:addons/l10n_pl_reports_vat_eu/models/account_sales_report.py:0
+msgid "Supplies of services"
+msgstr "Świadczenie usług"
+
+#. module: l10n_pl_reports_vat_eu
+#. odoo-python
+#: code:addons/l10n_pl_reports_vat_eu/models/account_sales_report.py:0
+msgid "The VAT-UE declaration must cover a single calendar month."
+msgstr "Deklaracja VAT-UE musi obejmować jeden miesiąc kalendarzowy."
+
+#. module: l10n_pl_reports_vat_eu
+#: model:account.report.column,name:l10n_pl_reports_vat_eu.vat_eu_triangular_acquisitions
+msgid "Triangular Acquisitions"
+msgstr "Transakcje trójstronne"
+
+#. module: l10n_pl_reports_vat_eu
+#: model:account.report.column,name:l10n_pl_reports_vat_eu.vat_eu_triangular_sales
+msgid "Triangular Supplies"
+msgstr "Dostawy trójstronne"
+
+#. module: l10n_pl_reports_vat_eu
+#. odoo-python
+#: code:addons/l10n_pl_reports_vat_eu/models/account_sales_report.py:0
+msgid "Triangular acquisitions"
+msgstr "Transakcje trójstronne"
+
+#. module: l10n_pl_reports_vat_eu
+#. odoo-python
+#: code:addons/l10n_pl_reports_vat_eu/models/account_sales_report.py:0
+msgid "Triangular supplies"
+msgstr "Dostawy trójstronne"
+
+#. module: l10n_pl_reports_vat_eu
+#: model:account.report.column,name:l10n_pl_reports_vat_eu.vat_eu_vat_number
+msgid "VAT Number"
+msgstr "Numer NIP"
+
+#. module: l10n_pl_reports_vat_eu
+#: model_terms:ir.ui.view,arch_db:l10n_pl_reports_vat_eu.vat_eu_export
+msgid "VAT-UE"
+msgstr "VAT-UE"
+
+#. module: l10n_pl_reports_vat_eu
+#. odoo-python
+#: code:addons/l10n_pl_reports_vat_eu/models/account_sales_report.py:0
+msgid "VAT-UE XML export for natural persons is not supported yet."
+msgstr "Eksport XML VAT-UE dla osób fizycznych nie jest jeszcze obsługiwany."
+
+#. module: l10n_pl_reports_vat_eu
+#. odoo-python
+#: code:addons/l10n_pl_reports_vat_eu/models/account_sales_report.py:0
+msgid "XML"
+msgstr "XML"
+
+#. module: l10n_pl_reports_vat_eu
+#. odoo-python
+#: code:addons/l10n_pl_reports_vat_eu/models/account_sales_report.py:0
+msgid "acquisitions"
+msgstr "nabycia"
+
+#. module: l10n_pl_reports_vat_eu
+#. odoo-python
+#: code:addons/l10n_pl_reports_vat_eu/models/account_sales_report.py:0
+msgid "services"
+msgstr "usługi"
+
+#. module: l10n_pl_reports_vat_eu
+#. odoo-python
+#: code:addons/l10n_pl_reports_vat_eu/models/account_sales_report.py:0
+msgid "triangular"
+msgstr "trójstronne"
+
+#. module: l10n_pl_reports_vat_eu
+#. odoo-python
+#: code:addons/l10n_pl_reports_vat_eu/models/account_sales_report.py:0
+msgid "triangular_acquisitions"
+msgstr "triangular_acquisitions"

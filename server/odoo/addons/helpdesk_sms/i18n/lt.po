@@ -1,0 +1,66 @@
+# Translation of Odoo Server.
+# This file contains the translation of the following modules:
+# * helpdesk_sms
+#
+# Weblate <noreply-mt-weblate@weblate.org>, 2025.
+# Ulevičienė <vilma.uleviciene@mededu.lt>, 2026.
+msgid ""
+msgstr ""
+"Project-Id-Version: Odoo Server saas~18.2+e\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-12-30 18:45+0000\n"
+"PO-Revision-Date: 2026-10-05 20:33+0000\n"
+"Last-Translator: Ulevičienė <vilma.uleviciene@mededu.lt>\n"
+"Language-Team: Lithuanian <https://translate.odoo.com/projects/odoo-19/"
+"helpdesk_sms/lt/>\n"
+"Language: lt\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: \n"
+"Plural-Forms: nplurals=3; plural=(n % 10 == 1 && (n % 100 < 11 || n % 100 > "
+"19)) ? 0 : ((n % 10 >= 2 && n % 10 <= 9 && (n % 100 < 11 || n % 100 > 19)) ? "
+"1 : 2);\n"
+"X-Generator: Weblate 2026.8.1\n"
+
+#. module: helpdesk_sms
+#: model:ir.model,website_form_label:helpdesk_sms.model_helpdesk_ticket
+msgid "Create a Ticket"
+msgstr "Sukurkite bilietą/pagalbos užklausą"
+
+#. module: helpdesk_sms
+#: model:ir.model.fields,field_description:helpdesk_sms.field_helpdesk_stage__display_name
+#: model:ir.model.fields,field_description:helpdesk_sms.field_helpdesk_ticket__display_name
+msgid "Display Name"
+msgstr "Rodomas pavadinimas"
+
+#. module: helpdesk_sms
+#: model:ir.model,name:helpdesk_sms.model_helpdesk_stage
+msgid "Helpdesk Stage"
+msgstr "Pagalbos tarnybos etapas"
+
+#. module: helpdesk_sms
+#: model:ir.model,name:helpdesk_sms.model_helpdesk_ticket
+msgid "Helpdesk Ticket"
+msgstr "Pagalbos kreipiniai"
+
+#. module: helpdesk_sms
+#: model:ir.model.fields,field_description:helpdesk_sms.field_helpdesk_stage__id
+#: model:ir.model.fields,field_description:helpdesk_sms.field_helpdesk_ticket__id
+msgid "ID"
+msgstr "ID"
+
+#. module: helpdesk_sms
+#: model:ir.model.fields,field_description:helpdesk_sms.field_helpdesk_stage__sms_template_id
+msgid "SMS Template"
+msgstr "SMS šablonas"
+
+#. module: helpdesk_sms
+#: model:ir.model.fields,help:helpdesk_sms.field_helpdesk_stage__sms_template_id
+msgid ""
+"SMS automatically sent to the customer when the ticket reaches this stage."
+msgstr "SMS automatiškai išsiunčiama klientui, kai užklausa pasiekia šį etapą."
+
+#. module: helpdesk_sms
+#: model:ir.actions.act_window,name:helpdesk_sms.action_helpdesk_ticket_mass_mail_sms
+msgid "Send SMS"
+msgstr "Siųsti SMS"

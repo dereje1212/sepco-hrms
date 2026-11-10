@@ -1,0 +1,174 @@
+# Part of Odoo. See LICENSE file for full copyright and licensing details.
+
+from collections import defaultdict
+from datetime import date, datetime, time
+from pytz import timezone, utc
+from odoo.exceptions import UserError
+
+from odoo import api, models, _
+from odoo.fields import Datetime, Domain
+from odoo.tools.intervals import Intervals
+
+
+class HrAttendance(models.Model):
+    _inherit = 'hr.attendance'
+
+    def _get_employee_calendar(self):
+        self.ensure_one()
+        contracts = self.employee_id.sudo()._get_versions_with_contract_overlap_with_period(self.check_in.date(), self.check_out.date())
+        if contracts:
+            return contracts[0].resource_calendar_id
+        return super()._get_employee_calendar()
+
+    def _create_work_entries(self):
+        # Upon creating or closing an attendance, create the work entry directly if the attendance
+        # was created within an already generated period
+        # This code assumes that attendances are not created/written in big batches
+        start_dates, stop_dates = [], []
+        for attendance in self:
+            # Only closed attendances can generate work entries
+            if not attendance.check_out:
+                continue
+
+            calendar = attendance._get_employee_calendar()
+            resource = attendance.employee_id.resource_id
+            tz_name = (calendar.tz if calendar else resource.tz) or 'UTC'
+            tz = timezone(tz_name)
+            check_in_local = utc.localize(attendance.check_in).astimezone(tz)
+            start_dates.append(tz.localize(datetime.combine(check_in_local.date(), time.min)).astimezone(utc).replace(tzinfo=None))
+            check_out_local = utc.localize(attendance.check_out).astimezone(tz)
+            stop_dates.append(tz.localize(datetime.combine(check_out_local.date(), time.max)).astimezone(utc).replace(tzinfo=None))
+
+        if not start_dates and not stop_dates:
+            return
+        start_window = min(start_dates)
+        stop_window = max(stop_dates)
+        attendances = self.search([
+            ('employee_id', 'in', self.employee_id.ids),
+            ('check_in', '>=', start_window),
+            ('check_in', '<=', stop_window),
+            ('check_out', '!=', False),
+        ])
+
+        # Work entries are stored per day, so we rebuild the whole local days touched by each attendance
+        windows_by_contract = defaultdict(list)
+        for attendance in attendances:
+            contracts = attendance.employee_id.sudo()._get_versions_with_contract_overlap_with_period(
+                attendance.check_in.date(), attendance.check_out.date())
+            for contract in contracts:
+                if attendance.check_out >= contract.date_generated_from and attendance.check_in <= contract.date_generated_to:
+                    # Use the same timezone as the work entry postprocess, which decides the work entry date
+                    tz = timezone(
+                        contract.resource_calendar_id.tz or contract.employee_id.resource_calendar_id.tz
+                        or contract.company_id.resource_calendar_id.tz or 'UTC',
+                    )
+                    # Only keep the days covered by this version to avoid duplicates between versions
+                    first_day = max(utc.localize(attendance.check_in).astimezone(tz).date(), contract.date_start)
+                    last_day = min(utc.localize(attendance.check_out).astimezone(tz).date(), contract.date_end or date.max)
+                    if first_day <= last_day:
+                        windows_by_contract[contract].append((
+                            tz.localize(datetime.combine(first_day, time.min)).astimezone(utc).replace(tzinfo=None),
+                            tz.localize(datetime.combine(last_day, time.max)).astimezone(utc).replace(tzinfo=None),
+                            attendance,
+                        ))
+
+        work_entries_vals_list = []
+        for contract, windows in windows_by_contract.items():
+            # Merge overlapping windows so a day is never generated twice for the same version
+            for window_start, window_stop, _attendances in Intervals(windows):
+                work_entries_vals_list += contract._get_work_entries_values(window_start, window_stop)
+
+        if work_entries_vals_list:
+            work_entries_vals_list = self.env['hr.version']._generate_work_entries_postprocess(work_entries_vals_list)
+            new_work_entries = self.env['hr.work.entry'].sudo().create(work_entries_vals_list)
+            if new_work_entries:
+                # Fetch overlapping work entries, grouped by employees
+                work_entry_groups = self.env['hr.work.entry'].sudo()._read_group(Domain.OR([
+                    Domain.AND([
+                        Domain('employee_id', '=', work_entry.employee_id.id),
+                        Domain('date', '=', work_entry.date),
+                    ])
+                    for work_entry in new_work_entries
+                ]), ['employee_id'], ['id:recordset'])
+                work_entries_by_employee = {
+                    employee.id: records
+                    for employee, records in work_entry_groups
+                }
+
+                # Archive work entries included in new work entries
+                included = self.env['hr.work.entry']
+                overlappping = self.env['hr.work.entry']
+                for work_entries in work_entries_by_employee.values():
+                    # Work entries for this employee
+                    new_employee_work_entries = work_entries & new_work_entries
+                    previous_employee_work_entries = work_entries - new_work_entries
+
+                    # Build intervals from work entries
+                    attendance_intervals = new_employee_work_entries._to_intervals()
+                    conflicts_intervals = previous_employee_work_entries._to_intervals()
+
+                    # Compute intervals completely outside any attendance
+                    # Intervals are outside, but associated records are overlapping.
+                    outside_intervals = conflicts_intervals - attendance_intervals
+
+                    overlappping |= self.env['hr.work.entry']._from_intervals(outside_intervals)
+                    included |= previous_employee_work_entries - overlappping
+                overlappping.sudo().write({'attendance_id': False})
+                included.sudo().write({'active': False})
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        start_dates = [v.get('check_in') for v in vals_list if v.get('check_in')]
+        stop_dates = [v.get('check_out') for v in vals_list if v.get('check_out')]
+        res = super().create(vals_list)
+        with self.env['hr.work.entry']._error_checking(start=min(start_dates, default=False), stop=max(stop_dates, default=False), employee_ids=res.employee_id.ids):
+            res._create_work_entries()
+        return res
+
+    def write(self, vals):
+        validated_work_entries = self.env['hr.work.entry'].sudo().search([('attendance_id', 'in', self.ids), ('state', '=', 'validated')])
+        if validated_work_entries:
+            raise UserError(_("This attendance record is linked to a validated working entry. You can't modify it."))
+        new_check_out = vals.get('check_out')
+        open_attendances = self.filtered(lambda a: not a.check_out) if new_check_out else self.env['hr.attendance']
+        res = super().write(vals)
+        if vals.get('check_out') or vals.get('check_in'):
+            domain = Domain.AND([
+                 Domain('employee_id', 'in', self.employee_id.ids),
+                 Domain('date', 'in', self.mapped('date'))
+            ])
+            work_entries = self.env['hr.work.entry'].sudo().search(domain)
+            slots = [{'date': attendance.date, 'employee_id': attendance.employee_id.id} for attendance in self]
+            self.env["hr.work.entry.regeneration.wizard"].sudo().regenerate_work_entries(slots=slots, record_ids=work_entries.ids)
+        if not open_attendances:
+            return res
+        skip_check = not bool({'check_in', 'check_out', 'employee_id'} & vals.keys())
+        start = min(self.mapped('check_in') + [Datetime.from_string(vals.get('check_in', False)) or datetime.max])
+        stop = max(self.mapped('check_out') + [Datetime.from_string(vals.get('check_out', False)) or datetime.min])
+        with self.env['hr.work.entry']._error_checking(start=start, stop=stop, skip=skip_check, employee_ids=self.employee_id.ids):
+            open_attendances._create_work_entries()
+        return res
+
+    @api.ondelete(at_uninstall=False)
+    def _unlink_except_validated_work_entries(self):
+        validated_work_entries = self.env['hr.work.entry'].sudo().search([('attendance_id', 'in', self.ids), ('state', '=', 'validated')])
+        if validated_work_entries:
+            raise UserError(_("This attendance record is linked to a validated working entry. You can't delete it."))
+
+    def unlink(self):
+        # Archive linked work entries upon deleting last attendance linked to the work entries
+        work_entries = (
+            self.env["hr.work.entry"].sudo().search(Domain.AND([
+                Domain("employee_id", "in", self.employee_id.ids),
+                Domain("date", "in", self.mapped('date'))
+            ])
+            )
+        )
+        start_dates = [a.check_in for a in self if a.check_in]
+        stop_dates = [a.check_out for a in self if a.check_out]
+        with self.env['hr.work.entry']._error_checking(start=min(start_dates, default=False), stop=max(stop_dates, default=False), employee_ids=self.employee_id.ids):
+            res = super().unlink()
+        if work_entries:
+            slots = [{'date': work_entry.date, 'employee_id': work_entry.employee_id.id} for work_entry in work_entries]
+            self.env["hr.work.entry.regeneration.wizard"].sudo().regenerate_work_entries(slots=slots, record_ids=work_entries.ids)
+        return res

@@ -1,0 +1,8 @@
+2026-11-10 13:32:16,890 29196 WARNING ? odoo.tools.config: missing --http-interface/http_interface, using 0.0.0.0 by default, will change to 127.0.0.1 in 20.0 
+2026-11-10 13:32:16,891 29196 INFO ? odoo: Odoo version 19.0+e-20261110 
+2026-11-10 13:32:16,891 29196 INFO ? odoo: Using configuration file at d:\sepco odoo19 enterprise\server\odoo.conf 
+2026-11-10 13:32:16,891 29196 INFO ? odoo: addons paths: _NamespacePath(['D:\\sepco odoo19 enterprise\\server\\odoo\\addons', 'C:\\Users\\HP\\AppData\\Local\\OpenERP S.A.\\Odoo\\addons\\19.0', 'd:\\sepco odoo19 enterprise\\server\\odoo\\addons', 'd:\\sepco odoo19 enterprise\\server\\addons']) 
+2026-11-10 13:32:16,891 29196 INFO ? odoo: database: odoo@localhost:5432 
+2026-11-10 13:32:18,509 29196 INFO ? odoo.service.server: Initiating shutdown 
+2026-11-10 13:32:18,510 29196 INFO ? odoo.service.server: Hit CTRL-C again or send a second signal to force the shutdown. 
+2026-11-10 13:32:18,517 29196 INFO ? odoo.service.server: A child process was found, pid is psutil.Process(pid=20948, name='conhost.exe', status='running', started='13:32:15'), process may hang 

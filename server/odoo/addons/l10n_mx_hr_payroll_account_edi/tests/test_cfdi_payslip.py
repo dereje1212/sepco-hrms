@@ -1,0 +1,208 @@
+# Part of Odoo. See LICENSE file for full copyright and licensing details.
+
+from odoo.tests.common import tagged
+from odoo.addons.l10n_mx_edi.tests.common import TestMxEdiCommon, EXTERNAL_MODE
+
+
+@tagged('post_install_l10n', 'post_install', '-at_install', *(['-standard', 'external'] if EXTERNAL_MODE else []))
+class TestMxEdiHrPayrollCommon(TestMxEdiCommon):
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.env.user.group_ids += cls.env.ref('hr_payroll.group_hr_payroll_user')
+        cls.company.partner_id.zip = '20000'
+        cls.company.l10n_mx_imss_id = 'B5510768108'
+        cls.company.vat = 'URE180429TM6'
+
+        cls.partner_employee = cls.env['res.partner'].create({
+            'name': "Ingrid Xodar Jimenez",
+            'country_id': cls.env.ref('base.mx').id,
+            'state_id': cls.env.ref('base.state_mx_jal').id,
+        })
+
+        cls.bank_account = cls.env['res.partner.bank'].create({
+            'acc_number': '1111111111',
+            'bank_id': cls.env.ref('l10n_mx.acc_bank_002_BANAMEX').id,
+            'partner_id': cls.partner_employee.id,
+        })
+
+        cls.department = cls.env['hr.department'].create({
+            'name': 'Desarrollo',
+            'company_id': cls.company.id,
+        })
+
+        cls.job = cls.env['hr.job'].sudo().create({
+            'name': 'Ingeniero de Software',
+            'company_id': cls.company.id,
+        })
+
+        cls.employee = cls.env['hr.employee'].create({
+            'name': 'Ingrid Xodar Jimenez',
+            'company_id': cls.company.id,
+            'bank_account_ids': cls.bank_account.ids,
+            'l10n_mx_rfc': 'XOJI740919U48',
+            'registration_number': '120',
+            'ssnid': '000000',
+            'l10n_mx_curp': 'XEXX010101HNEXXXA4',
+            'private_zip': '76028',
+            'work_contact_id': cls.partner_employee.id,
+            'department_id': cls.department.id,
+            'job_id': cls.job.id,
+            'date_version': '2015-01-01',
+            'contract_date_start': '2015-01-01',
+            'l10n_mx_regime_type': '03',
+            'contract_type_id': cls.env.ref('l10n_mx_hr_payroll_account_edi.l10n_mx_contract_type_01').id,
+            'wage': 50000,
+            'schedule_pay': 'bi-weekly',
+        })
+
+    def _assert_payslip_cfdi(self, payslip, filename):
+        document = payslip.l10n_mx_edi_document_ids.filtered(lambda x: x.state == 'payslip_sent')[:1]
+        self.assertTrue(document)
+        self._assert_document_cfdi(document, filename)
+
+    def _generate_payslip_with_cfdi(self, lines_values=None, other_inputs=None, struct=None):
+        payslip = self.env['hr.payslip'].create({
+            'employee_id': self.employee.id,
+            'name': 'Payslip',
+            'date_from': '2024-05-01',
+            'date_to': '2024-05-15',
+            'struct_id': (struct or self.env.ref('l10n_mx_hr_payroll.l10n_mx_regular_pay')).id,
+        })
+        # We can add other inputs to trigger some rules needed for some testing files
+        if other_inputs:
+            input_values = []
+            for xmlid, value in other_inputs.items():
+                input_values.append({
+                    'payslip_id': payslip.id,
+                    'input_type_id': self.env.ref(xmlid).id,
+                    'amount': value,
+                })
+            self.env['hr.payslip.input'].create(input_values)
+        payslip.compute_sheet()
+
+        # We can edit the payslip lines to have the same amounts and concepts as in the test_files
+        if lines_values:
+            action = payslip.action_edit_payslip_lines()
+            wizard = self.env[action['res_model']].browse(action['res_id'])
+            line_ids_by_code = wizard.line_ids.grouped('code')
+            for code, value in lines_values.items():
+                if code in line_ids_by_code:
+                    line_ids_by_code[code].amount = value
+            wizard.action_validate_edition()
+
+        payslip.action_payslip_done()
+        payslip.move_id.action_post()
+        payslip.action_payslip_paid()
+        with self.mx_external_setup(self.frozen_today), self.with_mocked_pac_sign_success():
+            payslip._l10n_mx_edi_cfdi_try_send()
+        return payslip
+
+    def test_cfdi_nomina(self):
+        payslip = self._generate_payslip_with_cfdi(
+            lines_values={
+                'ISR': 100,
+                'IMSS_EMPLOYEE_TOTAL': 200,
+                'CEAV_IMSS_EMPLOYEE': 0,
+                'SUBSIDY': 0,
+            })
+        self._assert_payslip_cfdi(payslip, 'test_cfdi_nomina')
+
+    def test_cfdi_nomina_con_bonos_fondo_ahorro_y_deducciones(self):
+        self.employee.wage = 30000
+        self.employee.l10n_mx_savings_fund = 500
+        payslip = self._generate_payslip_with_cfdi(
+            lines_values={
+                'ISR': 100,
+                'IMSS_EMPLOYEE_TOTAL': 200,
+                'CEAV_IMSS_EMPLOYEE': 0,
+                'SUBSIDY': 0,
+            },
+            other_inputs={
+                'l10n_mx_hr_payroll.l10n_mx_input_bonus': 150
+            })
+        self._assert_payslip_cfdi(payslip, 'test_cfdi_nomina_con_bonos_fondo_ahorro_y_deducciones')
+
+    def test_cfdi_nomina_con_incapacidades(self):
+        self.env['hr.leave'].create({
+            'employee_id': self.employee.id,
+            'holiday_status_id': self.env.ref('hr_holidays.l10n_mx_leave_type_work_risk_imss').id,
+            'request_date_from': '2024-05-06',
+            'request_date_to': '2024-05-10',
+        })
+        payslip = self._generate_payslip_with_cfdi()
+        self._assert_payslip_cfdi(payslip, 'test_cfdi_nomina_con_incapacidades')
+
+    def test_cfdi_nomina_antiguedad_menor_a_una_semana(self):
+        self.employee.contract_date_start = '2024-05-13'  # 3 days of seniority (date_to = 2024-05-15)
+        payslip = self._generate_payslip_with_cfdi()
+        self._assert_payslip_cfdi(payslip, 'test_cfdi_nomina_antiguedad_menor_a_una_semana')
+
+    def test_cfdi_nomina_sat_state_update(self):
+        payslip = self._generate_payslip_with_cfdi(
+            lines_values={
+                'ISR': 100,
+                'IMSS_EMPLOYEE_TOTAL': 200,
+                'CEAV_IMSS_EMPLOYEE': 0,
+                'SUBSIDY': 0,
+            })
+        document = payslip.l10n_mx_edi_document_ids.filtered(lambda x: x.state == 'payslip_sent')
+        self.assertRecordValues(document, [{'sat_state': 'not_defined'}])
+
+        with self.mx_external_setup(self.frozen_today), self.with_mocked_sat_call(lambda _x: 'valid'):
+            document._update_sat_state()
+
+        self.assertRecordValues(document, [{'sat_state': 'valid'}])
+
+    def test_cfdi_nomina_seniority_from_first_contract(self):
+        """FechaInicioRelLaboral and Antigüedad must use the start of the
+        continuous employment relationship, not the current contract's start date.
+        """
+        self.employee.create_version({
+            'date_version': '1987-01-03',
+            'contract_date_start': '1987-01-03',
+            'contract_date_end': '2014-12-31'
+        })
+        payslip = self._generate_payslip_with_cfdi()
+        cfdi_values = payslip._l10n_mx_edi_add_payslip_cfdi_values()
+        receptor = cfdi_values['nomina_receptor']
+        self.assertEqual(receptor['fecha_inicio_rel_laboral'], '1987-01-03',
+            "FechaInicioRelLaboral must reflect the original employment start, not the current contract.")
+        self.assertEqual(receptor['antigüedad'], 'P1949W',
+            "Antigüedad must be computed from the original employment start.")
+
+    def test_cfdi_nomina_seniority_non_continuous(self):
+        """If the employment relationship is not continuous (there is a gap
+        between contracts), FechaInicioRelLaboral and Antigüedad must not use the first
+        contract's start date, but the start of the current continuous employment period.
+        """
+        self.employee.create_version({
+            'date_version': '1987-01-03',
+            'contract_date_start': '1987-01-03',
+            'contract_date_end': '2014-12-01',  # 31-day gap before 2015-01-01
+        })
+        payslip = self._generate_payslip_with_cfdi()
+        cfdi_values = payslip._l10n_mx_edi_add_payslip_cfdi_values()
+        receptor = cfdi_values['nomina_receptor']
+        self.assertEqual(receptor['fecha_inicio_rel_laboral'], '2015-01-01',
+            "FechaInicioRelLaboral must not use the first version if employment was not continuous.")
+        self.assertEqual(receptor['antigüedad'], 'P488W',
+            "Antigüedad must be computed from the current continuous employment start date.")
+
+    def test_cfdi_nomina_duplicated_structure_salario_base_cot_apor(self):
+        """SalarioBaseCotApor must be found through the INT_DAY_WAGE rule code, so that
+        duplicated or custom structures (whose rules have no standard xmlid) are stamped correctly.
+        """
+        standard_struct = self.env.ref('l10n_mx_hr_payroll.l10n_mx_regular_pay')
+        struct = standard_struct.copy()
+        # Accounts are company dependent, hence not copied with the structure
+        standard_rules_by_code = standard_struct.rule_ids.grouped('code')
+        for rule in struct.rule_ids:
+            rule.write({
+                'account_debit': standard_rules_by_code[rule.code].account_debit.id,
+                'account_credit': standard_rules_by_code[rule.code].account_credit.id,
+            })
+        payslip = self._generate_payslip_with_cfdi(struct=struct)
+        cfdi_values = payslip._l10n_mx_edi_add_payslip_cfdi_values()
+        self.assertEqual(cfdi_values['nomina_receptor']['salario_base_cot_apor'], 2714.25)
